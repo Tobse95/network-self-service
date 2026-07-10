@@ -21,4 +21,4 @@ allocations:
             platforms:
                 aci: pending
                 bluecat: active
-                f5: pending
+                f5: active
