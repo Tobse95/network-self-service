@@ -1,0 +1,25 @@
+metadata:
+  requester: "team-beta"
+  ticket: "NET-1235"
+  description: "Internal API gateway subnet"
+
+subnet:
+  name: "api-gateway"
+  environment: "demo"
+  size: 24
+
+features:
+  dns: true
+  virtual_servers:
+    - virtual_server_ip: "10.20.0.100"
+      virtual_server_port: 443
+      protocol: tcp
+      pool_members:
+        - ip: "10.20.0.10"
+          port: 8443
+    - virtual_server_ip: "10.20.0.101"
+      virtual_server_port: 80
+      protocol: tcp
+      pool_members:
+        - ip: "10.20.0.10"
+          port: 8080
