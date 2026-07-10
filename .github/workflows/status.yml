@@ -22,7 +22,9 @@ jobs:
 
       - name: Build orchestrate
         working-directory: scripts
-        run: go build -o ../bin/orchestrate ./cmd/orchestrate
+        run: |
+          go mod download
+          go build -o ../bin/orchestrate ./cmd/orchestrate
 
       - name: Mark platform active
         run: |
