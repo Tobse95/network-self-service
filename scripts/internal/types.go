@@ -2,9 +2,14 @@ package internal
 
 // Request is the customer-facing subnet-request YAML.
 type Request struct {
+	Action   string          `yaml:"action"` // "provision" (default) or "remove"
 	Metadata RequestMetadata `yaml:"metadata"`
 	Subnet   SubnetSpec      `yaml:"subnet"`
 	Features Features        `yaml:"features"`
+}
+
+func (r *Request) IsRemoval() bool {
+	return r.Action == "remove"
 }
 
 type RequestMetadata struct {
@@ -16,27 +21,23 @@ type RequestMetadata struct {
 type SubnetSpec struct {
 	Name        string `yaml:"name"`
 	Environment string `yaml:"environment"`
-	CIDR        string `yaml:"cidr"`
-	Gateway     string `yaml:"gateway"`
+	Size        int    `yaml:"size"`
 	VLANID      *int   `yaml:"vlan_id"`
+	// Populated at runtime by AllocateSubnet — not read from YAML.
+	CIDR    string `yaml:"-"`
+	Gateway string `yaml:"-"`
 }
 
 type Features struct {
-	DNS              *bool         `yaml:"dns"`
-	SubnetForwarding *bool         `yaml:"subnet_forwarding"`
-	LoadBalancing    LoadBalancing `yaml:"load_balancing"`
+	DNS            *bool           `yaml:"dns"`
+	VirtualServers []VirtualServer `yaml:"virtual_servers"`
 }
 
 func (f Features) DNSEnabled() bool {
 	return f.DNS == nil || *f.DNS
 }
 
-func (f Features) SubnetFwdEnabled() bool {
-	return f.SubnetForwarding == nil || *f.SubnetForwarding
-}
-
-type LoadBalancing struct {
-	Enabled           bool         `yaml:"enabled"`
+type VirtualServer struct {
 	VirtualServerIP   string       `yaml:"virtual_server_ip"`
 	VirtualServerPort int          `yaml:"virtual_server_port"`
 	Protocol          string       `yaml:"protocol"`
@@ -54,10 +55,16 @@ type Environments struct {
 }
 
 type Environment struct {
-	DisplayName string        `yaml:"display_name"`
-	ACI         ACIConfig     `yaml:"aci"`
-	BlueCat     BlueCatConfig `yaml:"bluecat"`
-	F5          F5Config      `yaml:"f5"`
+	DisplayName string           `yaml:"display_name"`
+	SubnetPool  SubnetPoolConfig `yaml:"subnet_pool"`
+	ACI         ACIConfig        `yaml:"aci"`
+	BlueCat     BlueCatConfig    `yaml:"bluecat"`
+	F5          F5Config         `yaml:"f5"`
+}
+
+type SubnetPoolConfig struct {
+	ParentBlock string `yaml:"parent_block"`
+	DefaultSize int    `yaml:"default_size"`
 }
 
 type ACIConfig struct {
@@ -103,8 +110,13 @@ type State struct {
 }
 
 type VLANAllocation struct {
-	SubnetName  string `yaml:"subnet_name"`
-	CIDR        string `yaml:"cidr"`
-	RequestFile string `yaml:"request_file"`
-	AllocatedAt string `yaml:"allocated_at"`
+	SubnetName  string            `yaml:"subnet_name"`
+	Environment string            `yaml:"environment"`
+	CIDR        string            `yaml:"cidr"`
+	RequestFile string            `yaml:"request_file"`
+	AllocatedAt string            `yaml:"allocated_at"`
+	Status      string            `yaml:"status"`
+	ActiveSince string            `yaml:"active_since,omitempty"`
+	PRs         map[string]string `yaml:"prs,omitempty"`
+	Platforms   map[string]string `yaml:"platforms,omitempty"`
 }

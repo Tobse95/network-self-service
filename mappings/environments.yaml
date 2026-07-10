@@ -6,6 +6,9 @@ environments:
 
   demo:
     display_name: "Demo Environment"
+    subnet_pool:
+      parent_block: "10.20.0.0/16"
+      default_size: 24
     aci:
       github_owner: "Tobse95"
       github_repo: "demo-aci-iac"

@@ -7,10 +7,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ACISubnetVars is written to subnets/<name>.yaml in the ACI IAC repo.
-// The Terraform in that repo reads all files in subnets/ via fileset + yamldecode.
 type ACISubnetVars struct {
 	SubnetName   string `yaml:"subnet_name"`
+	Environment  string `yaml:"environment"`
 	CIDR         string `yaml:"cidr"`
 	Gateway      string `yaml:"gateway"`
 	PrefixLength int    `yaml:"prefix_length"`
@@ -22,9 +21,9 @@ type ACISubnetVars struct {
 	Description  string `yaml:"description"`
 }
 
-// BlueCatSubnetVars is written to subnets/<name>.yaml in the BlueCat IAC repo.
 type BlueCatSubnetVars struct {
 	SubnetName    string `yaml:"subnet_name"`
+	Environment   string `yaml:"environment"`
 	CIDR          string `yaml:"cidr"`
 	Gateway       string `yaml:"gateway"`
 	Description   string `yaml:"description"`
@@ -35,21 +34,19 @@ type BlueCatSubnetVars struct {
 }
 
 // F5SubnetVars is written to <device>/subnets/<name>.yaml in the F5 IAC repo.
+// Subnet forwarding (AS3 route advertisement) is always enabled for loadbalancer devices.
+// VirtualServers is non-empty only when LB virtual servers are requested.
 type F5SubnetVars struct {
-	SubnetName              string       `yaml:"subnet_name"`
-	CIDR                    string       `yaml:"cidr"`
-	Gateway                 string       `yaml:"gateway"`
-	PrefixLength            int          `yaml:"prefix_length"`
-	VLANID                  int          `yaml:"vlan_id"`
-	DeviceSelfIP            string       `yaml:"device_selfip"`
-	FloatingSelfIP          string       `yaml:"floating_selfip,omitempty"`
-	IsPrimary               bool         `yaml:"is_primary"`
-	SubnetForwardingEnabled bool         `yaml:"subnet_forwarding_enabled"`
-	LBEnabled               bool         `yaml:"lb_enabled"`
-	LBVirtualServerIP       string       `yaml:"lb_virtual_server_ip,omitempty"`
-	LBVirtualServerPort     int          `yaml:"lb_virtual_server_port,omitempty"`
-	LBProtocol              string       `yaml:"lb_protocol,omitempty"`
-	LBPoolMembers           []PoolMember `yaml:"lb_pool_members,omitempty"`
+	SubnetName     string          `yaml:"subnet_name"`
+	Environment    string          `yaml:"environment"`
+	CIDR           string          `yaml:"cidr"`
+	Gateway        string          `yaml:"gateway"`
+	PrefixLength   int             `yaml:"prefix_length"`
+	VLANID         int             `yaml:"vlan_id"`
+	DeviceSelfIP   string          `yaml:"device_selfip"`
+	FloatingSelfIP string          `yaml:"floating_selfip,omitempty"`
+	IsPrimary      bool            `yaml:"is_primary"`
+	VirtualServers []VirtualServer `yaml:"virtual_servers,omitempty"`
 }
 
 func marshalWithHeader(ticket string, extras []string, v any) (string, error) {
@@ -65,10 +62,10 @@ func marshalWithHeader(ticket string, extras []string, v any) (string, error) {
 	return strings.Join(lines, "\n") + "\n" + string(data), nil
 }
 
-// BuildACIVars returns the target file path and YAML content for the ACI IAC repo.
 func BuildACIVars(req *Request, env *Environment, vlanID, prefixLen int) (path, content string, err error) {
 	v := ACISubnetVars{
 		SubnetName:   req.Subnet.Name,
+		Environment:  req.Subnet.Environment,
 		CIDR:         req.Subnet.CIDR,
 		Gateway:      req.Subnet.Gateway,
 		PrefixLength: prefixLen,
@@ -86,10 +83,10 @@ func BuildACIVars(req *Request, env *Environment, vlanID, prefixLen int) (path, 
 	return "subnets/" + req.Subnet.Name + ".yaml", body, nil
 }
 
-// BuildBlueCatVars returns the target file path and YAML content for the BlueCat IAC repo.
 func BuildBlueCatVars(req *Request, env *Environment) (path, content string, err error) {
 	v := BlueCatSubnetVars{
 		SubnetName:    req.Subnet.Name,
+		Environment:   req.Subnet.Environment,
 		CIDR:          req.Subnet.CIDR,
 		Gateway:       req.Subnet.Gateway,
 		Description:   fmt.Sprintf("%s — %s", req.Metadata.Ticket, req.Metadata.Requester),
@@ -105,34 +102,31 @@ func BuildBlueCatVars(req *Request, env *Environment) (path, content string, err
 	return "subnets/" + req.Subnet.Name + ".yaml", body, nil
 }
 
-// BuildF5Vars returns the target file path and YAML content for one F5 device.
-// All device files are committed to the F5 IAC repo in a single PR.
 func BuildF5Vars(req *Request, device *F5Device, vlanID, prefixLen int, deviceSelfIP, floatingSelfIP string) (path, content string, err error) {
 	isPrimary := strings.HasSuffix(device.Folder, "-primary")
-	lb := req.Features.LoadBalancing
+
+	// Normalize protocol default on each virtual server
+	vses := make([]VirtualServer, len(req.Features.VirtualServers))
+	for i, vs := range req.Features.VirtualServers {
+		vses[i] = vs
+		if vses[i].Protocol == "" {
+			vses[i].Protocol = "tcp"
+		}
+	}
 
 	v := F5SubnetVars{
-		SubnetName:              req.Subnet.Name,
-		CIDR:                    req.Subnet.CIDR,
-		Gateway:                 req.Subnet.Gateway,
-		PrefixLength:            prefixLen,
-		VLANID:                  vlanID,
-		DeviceSelfIP:            deviceSelfIP,
-		IsPrimary:               isPrimary,
-		SubnetForwardingEnabled: req.Features.SubnetFwdEnabled(),
-		LBEnabled:               lb.Enabled,
+		SubnetName:     req.Subnet.Name,
+		Environment:    req.Subnet.Environment,
+		CIDR:           req.Subnet.CIDR,
+		Gateway:        req.Subnet.Gateway,
+		PrefixLength:   prefixLen,
+		VLANID:         vlanID,
+		DeviceSelfIP:   deviceSelfIP,
+		IsPrimary:      isPrimary,
+		VirtualServers: vses,
 	}
 	if isPrimary {
 		v.FloatingSelfIP = floatingSelfIP
-	}
-	if lb.Enabled {
-		v.LBVirtualServerIP = lb.VirtualServerIP
-		v.LBVirtualServerPort = lb.VirtualServerPort
-		v.LBProtocol = lb.Protocol
-		if v.LBProtocol == "" {
-			v.LBProtocol = "tcp"
-		}
-		v.LBPoolMembers = lb.PoolMembers
 	}
 
 	body, err := marshalWithHeader(req.Metadata.Ticket, []string{"# Device: " + device.Folder}, v)

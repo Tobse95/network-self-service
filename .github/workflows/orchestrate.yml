@@ -33,13 +33,18 @@ jobs:
           go build -o ../bin/validate ./cmd/validate
           go build -o ../bin/orchestrate ./cmd/orchestrate
 
-      - name: Detect new/modified request files
+      - name: Detect new/modified/deleted request files
         id: changed
         run: |
-          FILES=$(git diff --name-only --diff-filter=AM HEAD~1..HEAD -- requests/ \
+          UPSERTED=$(git diff --name-only --diff-filter=AM HEAD~1..HEAD -- requests/ \
             | grep '\.ya\?ml$' || true)
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$FILES" >> $GITHUB_OUTPUT
+          DELETED=$(git diff --name-only --diff-filter=D HEAD~1..HEAD -- requests/ \
+            | grep '\.ya\?ml$' || true)
+          echo "upserted<<EOF" >> $GITHUB_OUTPUT
+          echo "$UPSERTED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "deleted<<EOF" >> $GITHUB_OUTPUT
+          echo "$DELETED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Validate before orchestrating
@@ -48,7 +53,7 @@ jobs:
             [ -z "$file" ] && continue
             echo "Pre-flight: $file"
             ./bin/validate --request "$file"
-          done <<< "${{ steps.changed.outputs.files }}"
+          done <<< "${{ steps.changed.outputs.upserted }}"
 
       - name: Orchestrate each request
         env:
@@ -58,9 +63,21 @@ jobs:
             [ -z "$file" ] && continue
             echo "Orchestrating: $file"
             ./bin/orchestrate --request "$file"
-          done <<< "${{ steps.changed.outputs.files }}"
+          done <<< "${{ steps.changed.outputs.upserted }}"
 
-      - name: Commit updated VLAN state
+      - name: Handle deleted requests (subnet removal)
+        env:
+          SELF_SERVICE_GITHUB_TOKEN: ${{ secrets.SELF_SERVICE_GITHUB_TOKEN }}
+        run: |
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            echo "Recovering deleted request from git history: $file"
+            git show HEAD~1:"$file" > /tmp/deleted_request.yaml
+            echo "Orchestrating removal for: $file"
+            ./bin/orchestrate --request /tmp/deleted_request.yaml --action remove
+          done <<< "${{ steps.changed.outputs.deleted }}"
+
+      - name: Commit updated state
         run: |
           git config user.name  "self-service-bot"
           git config user.email "self-service-bot@noreply.github.com"
@@ -68,6 +85,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No state changes"
           else
-            git commit -m "chore: update vlan allocations [skip ci]"
+            git commit -m "chore: update subnet allocations [skip ci]"
             git push
           fi

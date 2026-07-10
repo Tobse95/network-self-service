@@ -1,0 +1,42 @@
+name: Update subnet status
+
+on:
+  repository_dispatch:
+    types: [subnet-active]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Mark platform active
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+          cache-dependency-path: scripts/go.sum
+
+      - name: Build orchestrate
+        working-directory: scripts
+        run: go build -o ../bin/orchestrate ./cmd/orchestrate
+
+      - name: Mark platform active
+        run: |
+          ./bin/orchestrate \
+            --mark-active "${{ github.event.client_payload.environment }}/${{ github.event.client_payload.subnet_name }}/${{ github.event.client_payload.platform }}"
+
+      - name: Commit state
+        run: |
+          git config user.name  "self-service-bot"
+          git config user.email "self-service-bot@noreply.github.com"
+          git add state/vlan-allocations.yaml
+          if git diff --cached --quiet; then
+            echo "No state changes"
+          else
+            git commit -m "chore: subnet ${{ github.event.client_payload.subnet_name }} active on ${{ github.event.client_payload.platform }} [skip ci]"
+            git push
+          fi
