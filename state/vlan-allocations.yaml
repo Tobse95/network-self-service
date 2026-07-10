@@ -23,3 +23,18 @@ allocations:
                 aci: active
                 bluecat: active
                 f5: active
+        "102":
+            subnet_name: demo-subnet
+            environment: demo
+            cidr: 10.20.1.0/24
+            request_file: requests/2026-08-10-team-demo.yaml
+            allocated_at: "2026-07-10T20:51:56Z"
+            status: pending
+            prs:
+                aci: https://github.com/Tobse95/demo-aci-iac/pull/3
+                bluecat: https://github.com/Tobse95/demo-bluecat-iac/pull/3
+                f5: https://github.com/Tobse95/demo-f5-iac/pull/3
+            platforms:
+                aci: pending
+                bluecat: pending
+                f5: pending
