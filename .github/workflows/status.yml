@@ -40,5 +40,8 @@ jobs:
             echo "No state changes"
           else
             git commit -m "chore: subnet ${{ github.event.client_payload.subnet_name }} active on ${{ github.event.client_payload.platform }} [skip ci]"
-            git push
+            # Retry push with rebase on concurrent-write conflicts
+            for i in 1 2 3; do
+              git push && break || (git pull --rebase && true)
+            done
           fi
