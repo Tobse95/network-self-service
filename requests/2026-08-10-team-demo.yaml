@@ -1,0 +1,14 @@
+metadata:
+  requester: "team-demo"
+  ticket: "NET-5555"
+  description: "Internal demo subnet"
+
+subnet:
+  name: "demo-subnet"
+  environment: "demo"
+  size: 24
+
+features:
+  dns: true
+  virtual_servers:
+
