@@ -2,6 +2,23 @@ allocations:
     demo:
         "100":
             subnet_name: webapp-demo
+            environment: ""
             cidr: 10.20.30.0/24
             request_file: requests/2026-07-10-team-alpha-webapp.yaml
             allocated_at: "2026-07-10T19:59:39Z"
+            status: ""
+        "101":
+            subnet_name: api-gateway
+            environment: demo
+            cidr: 10.20.0.0/24
+            request_file: requests/2026-07-10-team-beta-api.yaml
+            allocated_at: "2026-07-10T20:36:17Z"
+            status: pending
+            prs:
+                aci: https://github.com/Tobse95/demo-aci-iac/pull/2
+                bluecat: https://github.com/Tobse95/demo-bluecat-iac/pull/2
+                f5: https://github.com/Tobse95/demo-f5-iac/pull/2
+            platforms:
+                aci: pending
+                bluecat: pending
+                f5: pending
