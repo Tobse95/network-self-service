@@ -1,0 +1,90 @@
+# Ops-managed mapping: logical environment key → physical infrastructure repos.
+# The self-service orchestrator reads this to know where to open PRs and what
+# variable values to pass to each IAC repo.
+
+environments:
+
+  demo:
+    display_name: "Demo Environment"
+    aci:
+      github_owner: "Tobse95"
+      github_repo: "demo-aci-iac"
+      tenant: "DEMO_TENANT"
+      vrf: "DEMO_VRF"
+      ap: "AP_DEMO"
+      domain: "phys_domain_demo"
+    bluecat:
+      github_owner: "Tobse95"
+      github_repo: "demo-bluecat-iac"
+      configuration: "DEMO"
+      view: "Internal"
+      parent_block: "10.0.0.0/8"
+    f5:
+      github_owner: "Tobse95"
+      github_repo: "demo-f5-iac"
+      vlan_pool: [100, 999]
+      devices:
+        - folder: "hypervisor01-primary"
+          role: hypervisor
+          selfip_offset: 2
+          floating_selfip_offset: 1
+          interfaces:
+            - name: "1.1"
+              tagged: true
+        - folder: "hypervisor01-secondary"
+          role: hypervisor
+          selfip_offset: 3
+          floating_selfip_offset: 1
+          interfaces:
+            - name: "1.1"
+              tagged: true
+        - folder: "loadbalancer01-primary"
+          role: loadbalancer
+          selfip_offset: 4
+          floating_selfip_offset: 1
+          interfaces:
+            - name: "1.1"
+              tagged: true
+        - folder: "loadbalancer01-secondary"
+          role: loadbalancer
+          selfip_offset: 5
+          floating_selfip_offset: 1
+          interfaces:
+            - name: "1.1"
+              tagged: true
+        - folder: "loadbalancer02-primary"
+          role: loadbalancer
+          selfip_offset: 6
+          floating_selfip_offset: 1
+          interfaces:
+            - name: "1.1"
+              tagged: true
+        - folder: "loadbalancer02-secondary"
+          role: loadbalancer
+          selfip_offset: 7
+          floating_selfip_offset: 1
+          interfaces:
+            - name: "1.1"
+              tagged: true
+
+  # Template for adding real environments — copy and fill in your actual repos:
+  # prod-eu-west:
+  #   display_name: "Production EU West"
+  #   aci:
+  #     github_owner: "your-org"
+  #     github_repo: "ckae-aci"
+  #     tenant: "PROD_EU_WEST"
+  #     vrf: "PROD_VRF"
+  #     ap: "AP_PROD"
+  #     domain: "phys_domain_prod"
+  #   bluecat:
+  #     github_owner: "your-org"
+  #     github_repo: "ckae-bluecat"
+  #     configuration: "PROD"
+  #     view: "Internal"
+  #     parent_block: "10.0.0.0/8"
+  #   f5:
+  #     github_owner: "your-org"
+  #     github_repo: "ckae-f5"
+  #     vlan_pool: [100, 999]
+  #     devices: [...]

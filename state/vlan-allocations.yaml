@@ -1,0 +1,12 @@
+# Auto-managed by the orchestrator. Do not edit manually.
+# Tracks VLAN allocations per environment to prevent conflicts.
+
+allocations: {}
+# Format after entries exist:
+# allocations:
+#   prod-eu-west:
+#     320:
+#       subnet_name: webapp-prod
+#       cidr: 10.20.30.0/24
+#       request_file: requests/2024-01-15-team-alpha-webapp.yaml
+#       allocated_at: "2024-01-15T10:00:00Z"

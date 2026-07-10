@@ -1,0 +1,92 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: SubnetRequest
+type: object
+required:
+  - metadata
+  - subnet
+additionalProperties: false
+
+properties:
+  metadata:
+    type: object
+    required: [requester, ticket]
+    additionalProperties: false
+    properties:
+      requester:
+        type: string
+        description: "Team or person requesting the subnet"
+      ticket:
+        type: string
+        description: "Ticket reference (e.g. JIRA-1234)"
+      description:
+        type: string
+
+  subnet:
+    type: object
+    required: [name, environment, cidr, gateway]
+    additionalProperties: false
+    properties:
+      name:
+        type: string
+        pattern: "^[a-z0-9-]+$"
+        description: "Short lowercase slug, used as resource name prefix"
+      environment:
+        type: string
+        description: "Logical environment key matching mappings/environments.yaml"
+      cidr:
+        type: string
+        pattern: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}/\\d{1,2}$"
+        description: "IPv4 CIDR block"
+      gateway:
+        type: string
+        pattern: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+        description: "Default gateway IP (must be within cidr)"
+      vlan_id:
+        type: integer
+        minimum: 2
+        maximum: 4094
+        description: "Optional. Auto-assigned from pool when omitted."
+      mask:
+        type: string
+        description: "Subnet mask in dotted notation. Derived from cidr if omitted."
+
+  features:
+    type: object
+    additionalProperties: false
+    properties:
+      dns:
+        type: boolean
+        default: true
+        description: "Register subnet in BlueCat DNS/IPAM"
+      subnet_forwarding:
+        type: boolean
+        default: true
+        description: "Create AS3 forwarding virtual server on F5"
+      load_balancing:
+        type: object
+        additionalProperties: false
+        properties:
+          enabled:
+            type: boolean
+            default: false
+          virtual_server_ip:
+            type: string
+            pattern: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+          virtual_server_port:
+            type: integer
+            minimum: 1
+            maximum: 65535
+          protocol:
+            type: string
+            enum: [tcp, udp]
+            default: tcp
+          pool_members:
+            type: array
+            items:
+              type: object
+              required: [ip, port]
+              properties:
+                ip:
+                  type: string
+                port:
+                  type: integer

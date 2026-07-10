@@ -1,0 +1,26 @@
+# Example subnet request — copy this file, fill it in, open a PR.
+# File naming convention: <date>-<team>-<subnet-name>.yaml
+
+metadata:
+  requester: "team-alpha"
+  ticket: "NET-1234"
+  description: "Web application servers for team alpha project"
+
+subnet:
+  name: "webapp-demo"              # lowercase, hyphens only
+  environment: "demo"              # must match a key in mappings/environments.yaml
+  cidr: "10.20.30.0/24"
+  gateway: "10.20.30.1"
+  # vlan_id: 320                   # optional — auto-assigned from pool if omitted
+
+features:
+  dns: true                        # register in BlueCat (default: true)
+  subnet_forwarding: true          # AS3 forwarding VS on loadbalancers (default: true)
+  load_balancing:
+    enabled: false                 # set true to add an LB virtual server
+    # virtual_server_ip: "10.20.30.100"
+    # virtual_server_port: 443
+    # protocol: tcp
+    # pool_members:
+    #   - ip: "10.20.30.10"
+    #     port: 8443
