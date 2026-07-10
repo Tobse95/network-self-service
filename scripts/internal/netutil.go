@@ -6,6 +6,56 @@ import (
 	"net"
 )
 
+// AllocateFromBlock finds the first subnet of prefixLen within parentBlock
+// that does not overlap any entry in usedCIDRs.
+// Returns the allocated CIDR and its gateway (network address + 1).
+func AllocateFromBlock(parentBlock string, prefixLen int, usedCIDRs []string) (cidr, gateway string, err error) {
+	_, parent, err := net.ParseCIDR(parentBlock)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid parent block %q: %w", parentBlock, err)
+	}
+	parentOnes, bits := parent.Mask.Size()
+	if bits != 32 {
+		return "", "", fmt.Errorf("only IPv4 is supported")
+	}
+	if prefixLen <= parentOnes || prefixLen > 30 {
+		return "", "", fmt.Errorf("requested /%d is invalid within parent /%d", prefixLen, parentOnes)
+	}
+
+	step := uint32(1) << uint(bits-prefixLen)
+	parentStart := binary.BigEndian.Uint32(parent.IP.To4())
+	parentEnd := parentStart | ^binary.BigEndian.Uint32([]byte(parent.Mask))
+
+	for n := parentStart; n+step-1 <= parentEnd; n += step {
+		ip := make(net.IP, 4)
+		binary.BigEndian.PutUint32(ip, n)
+		candidate := fmt.Sprintf("%s/%d", ip.String(), prefixLen)
+
+		overlaps := false
+		for _, used := range usedCIDRs {
+			if used == "" {
+				continue
+			}
+			if ok, _ := CIDRsOverlap(candidate, used); ok {
+				overlaps = true
+				break
+			}
+		}
+		if !overlaps {
+			gw, err := OffsetIP(candidate, 1)
+			if err != nil {
+				return "", "", err
+			}
+			return candidate, gw, nil
+		}
+
+		if n+step < n { // overflow guard
+			break
+		}
+	}
+	return "", "", fmt.Errorf("no free /%d subnet available in %s", prefixLen, parentBlock)
+}
+
 func PrefixLength(cidr string) (int, error) {
 	_, network, err := net.ParseCIDR(cidr)
 	if err != nil {
