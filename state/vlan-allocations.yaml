@@ -20,5 +20,5 @@ allocations:
                 f5: https://github.com/Tobse95/demo-f5-iac/pull/2
             platforms:
                 aci: pending
-                bluecat: pending
+                bluecat: active
                 f5: pending
